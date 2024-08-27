@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import groupRoutes from './routes/groupRoutes.js';
+import commentRoutes from './routes/commentRoutes.js';
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/groups', groupRoutes);
+app.use('/api/comments', commentRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
