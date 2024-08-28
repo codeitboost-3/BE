@@ -3,15 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>게시글</title>
+    <title>게시글 목록</title>
     <link rel="stylesheet" href="css/css.css">
 </head>
 <body>
     <div class="board_wrap">
         <div class="board_title">
-                <strong>게시글</strong>
-                <p>게시글 목록을 확인할 수 있습니다.</p>
+            <strong>게시글 목록</strong>
+            <p>게시글 목록을 확인할 수 있습니다.</p>
         </div>
+
+        <!-- 검색 및 정렬 기능 추가 -->
+        <div class="search_sort_wrap">
+            <input type="text" id="searchInput" placeholder="제목으로 검색">
+            <button id="searchBtn">검색</button>
+            <select id="sortSelect">
+                <option value="date">날짜순</option>
+                <option value="views">조회수순</option>
+            </select>
+        </div>
+
         <div class="board_list_wrap">
             <div class="board_list">
                 <div class="top">
@@ -20,56 +31,77 @@
                     <div class="writer">글쓴이</div>
                     <div class="date">작성일</div>
                     <div class="count">조회</div>
+                    <div class="likes">공감</div>
                 </div>    
-                <div>
-                    <div class="num">5</div>
-                    <div class="title"><a href="view.html">글 제목이 들어갑니다.</a></div>
-                    <div class="writer">유수빈</div>
-                    <div class="date">2033.8.21</div>
-                    <div class="count">39</div>
+                <div id="postList" class="post_list_container">
+                    <!-- 게시글 목록이 여기에 동적으로 추가됩니다. -->
                 </div>
-                <div>
-                    <div class="num">4</div>
-                    <div class="title"><a href="view.html">글 제목이 들어갑니다.</a></div>
-                    <div class="writer">유수빈</div>
-                    <div class="date">2033.8.21</div>
-                    <div class="count">39</div>
-                </div><div>
-                    <div class="num">3</div>
-                    <div class="title"><a href="view.html">글 제목이 들어갑니다.</a></div>
-                    <div class="writer">유수빈</div>
-                    <div class="date">2033.8.21</div>
-                    <div class="count">39</div>
-                </div><div>
-                    <div class="num">2</div>
-                    <div class="title"><a href="view.html">글 제목이 들어갑니다.</a></div>
-                    <div class="writer">유수빈</div>
-                    <div class="date">2033.8.21</div>
-                    <div class="count">39</div>
-                </div><div>
-                    <div class="num">1</div>
-                    <div class="title"><a href="view.html">글 제목이 들어갑니다.</a></div>
-                    <div class="writer">유수빈</div>
-                    <div class="date">2033.8.21</div>
-                    <div class="count">39</div>
-                </div>
-            </div>
-            <div class="board_page">
-                <a href="#" class="bt first"><<</a>
-                <a href="#" class="bt prev"><</a>
-                <a href="#" class="num on">1</a>
-                <a href="#" class="num">2</a>
-                <a href="#" class="num">3</a>
-                <a href="#" class="num">4</a>
-                <a href="#" class="num">5</a>
-                <a href="#" class="bt next">></a>
-                <a href="#" class="bt last">>></a>
             </div>
             <div class="bt_wrap">
                 <a href="write.html" class="on">등록</a>
-                <!--a href="#">수정</a>-->
             </div>
         </div>
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const postListDiv = document.getElementById('postList');
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            
+            // 게시글 출력 함수
+            function renderPosts(postsToRender) {
+                postListDiv.innerHTML = "";
+                if (postsToRender.length === 0) {
+                    postListDiv.innerHTML = "<p>게시글이 없습니다.</p>";
+                } else {
+                    postsToRender.forEach(post => {
+                        const postDiv = document.createElement('div');
+                        postDiv.className = "post_item";
+                        postDiv.innerHTML = `
+                            <div class="num">${post.id}</div>
+                            <div class="title"><a href="view.html?id=${post.id}">${post.title}</a></div>
+                            <div class="writer">${post.author}</div>
+                            <div class="date">${post.date}</div>
+                            <div class="count">${post.views}</div>
+                            <div class="likes">${post.likes} <button onclick="likePost(${post.id})">공감</button></div>
+                        `;
+                        postListDiv.appendChild(postDiv);
+                    });
+                }
+            }
+
+            // 처음 페이지 로드 시 게시글 목록 출력
+            renderPosts(posts);
+
+            // 공감 기능
+            window.likePost = function(postId) {
+                const postIndex = posts.findIndex(post => post.id === postId);
+                if (postIndex !== -1) {
+                    posts[postIndex].likes += 1;
+                    localStorage.setItem('posts', JSON.stringify(posts));
+                    renderPosts(posts);
+                }
+            };
+
+            // 검색 기능
+            document.getElementById('searchBtn').addEventListener('click', function() {
+                const searchText = document.getElementById('searchInput').value.toLowerCase();
+                const filteredPosts = posts.filter(post => post.title.toLowerCase().includes(searchText));
+                renderPosts(filteredPosts);
+            });
+
+            // 정렬 기능
+            document.getElementById('sortSelect').addEventListener('change', function() {
+                const sortValue = this.value;
+                const sortedPosts = [...posts];  // 원본 배열을 수정하지 않도록 복사본 사용
+                if (sortValue === "views") {
+                    sortedPosts.sort((a, b) => b.views - a.views);
+                } else if (sortValue === "date") {
+                    sortedPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                }
+                renderPosts(sortedPosts);
+            });
+        });
+    </script>
 </body>
 </html>
