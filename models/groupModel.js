@@ -1,3 +1,5 @@
+import { checkBadges } from './badgeModel.js';
+
 const groups = [];
 
 const getId = () => {
@@ -11,6 +13,7 @@ export const createGroup = (data) => {
         likeCount: 0,
         postCount: 0,
         badgeCount: 0,
+        badges: [],
         memories: [],
         createdAt: new Date().toISOString()
     };
@@ -31,6 +34,11 @@ export const updateGroupById = (id, data) => {
     const index = groups.findIndex(group => group.id === id);
     if (index !== -1) {
         groups[index] = { ...groups[index], ...data };
+
+        // 배지 확인 및 추가
+        const newBadges = checkBadges(groups[index]);
+        groups[index].badges = [...new Set([...groups[index].badges, ...newBadges])];
+
         return groups[index];
     }
     return null;

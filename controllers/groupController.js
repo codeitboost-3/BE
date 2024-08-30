@@ -48,6 +48,7 @@ export const updateGroup = async (req, res) => {
         if (group.password !== password) return res.status(403).json({ message: '비밀번호가 틀렸습니다' });
         
         const updatedGroup = await updateGroupById(groupId, { name, imageUrl, isPublic, introduction });
+
         return res.status(200).json(updatedGroup);
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
@@ -132,3 +133,19 @@ export const checkGroupPublicStatus = async (req, res) => {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
 };
+
+// 배지 조회 API 추가
+export const getGroupBadges = async (req, res) => {
+    try {
+        const { groupId } = req.params;
+        
+        const group = await getGroupById(groupId);
+        if (!group) return res.status(404).json({ message: '존재하지 않습니다' });
+        
+        return res.status(200).json({ badges: group.badges });
+    } catch (error) {
+        return res.status(500).json({ message: '서버 오류입니다', error: error.message });
+    }
+};
+
+
