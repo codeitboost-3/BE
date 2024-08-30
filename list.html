@@ -16,10 +16,17 @@
         <!-- 검색 및 정렬 기능 추가 -->
         <div class="search_sort_wrap">
             <input type="text" id="searchInput" placeholder="제목으로 검색">
+            <input type="text" id="tagSearchInput" placeholder="태그로 검색">
             <button id="searchBtn">검색</button>
             <select id="sortSelect">
-                <option value="date">날짜순</option>
-                <option value="views">조회수순</option>
+                <option value="latest">최신순</option>
+                <option value="comments">댓글순</option>
+                <option value="likes">공감순</option>
+            </select>
+            <select id="visibilitySelect">
+                <option value="all">전체</option>
+                <option value="public">공개</option>
+                <option value="private">비공개</option>
             </select>
         </div>
 
@@ -83,22 +90,44 @@
                 }
             };
 
-            // 검색 기능
+            // 검색 및 필터링 기능
             document.getElementById('searchBtn').addEventListener('click', function() {
                 const searchText = document.getElementById('searchInput').value.toLowerCase();
-                const filteredPosts = posts.filter(post => post.title.toLowerCase().includes(searchText));
+                const tagSearchText = document.getElementById('tagSearchInput').value.toLowerCase();
+                const visibilityFilter = document.getElementById('visibilitySelect').value;
+                
+                let filteredPosts = posts;
+
+                if (searchText) {
+                    filteredPosts = filteredPosts.filter(post => post.title.toLowerCase().includes(searchText));
+                }
+
+                if (tagSearchText) {
+                    filteredPosts = filteredPosts.filter(post => post.tags.some(tag => tag.toLowerCase().includes(tagSearchText)));
+                }
+
+                if (visibilityFilter === 'public') {
+                    filteredPosts = filteredPosts.filter(post => post.visibility === 'public');
+                } else if (visibilityFilter === 'private') {
+                    filteredPosts = filteredPosts.filter(post => post.visibility === 'private');
+                }
+
                 renderPosts(filteredPosts);
             });
 
             // 정렬 기능
             document.getElementById('sortSelect').addEventListener('change', function() {
                 const sortValue = this.value;
-                const sortedPosts = [...posts];  // 원본 배열을 수정하지 않도록 복사본 사용
-                if (sortValue === "views") {
-                    sortedPosts.sort((a, b) => b.views - a.views);
-                } else if (sortValue === "date") {
+                let sortedPosts = [...posts];  // 원본 배열을 수정하지 않도록 복사본 사용
+
+                if (sortValue === "likes") {
+                    sortedPosts.sort((a, b) => b.likes - a.likes);
+                } else if (sortValue === "comments") {
+                    sortedPosts.sort((a, b) => (b.comments || 0) - (a.comments || 0));
+                } else if (sortValue === "latest") {
                     sortedPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 }
+
                 renderPosts(sortedPosts);
             });
         });
