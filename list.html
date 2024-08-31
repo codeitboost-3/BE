@@ -5,6 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>게시글 목록</title>
     <link rel="stylesheet" href="css/css.css">
+    <style>
+        .post_item {
+            display: grid;
+            grid-template-columns: 50px 1fr 100px 100px 70px 70px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .post_item .num {
+            text-align: center;
+        }
+        .post_item .title a {
+            text-decoration: none;
+            color: #000;
+        }
+        .post_item .title a:hover {
+            text-decoration: underline;
+        }
+        .search_sort_wrap {
+            margin-bottom: 20px;
+        }
+        .search_sort_wrap input, .search_sort_wrap select {
+            margin-right: 10px;
+            padding: 5px;
+        }
+        .search_sort_wrap button {
+            padding: 5px 10px;
+        }
+    </style>
 </head>
 <body>
     <div class="board_wrap">
@@ -41,7 +69,7 @@
                     <div class="likes">공감</div>
                 </div>    
                 <div id="postList" class="post_list_container">
-                    <!-- 게시글 목록이 여기에 동적으로 추가됩니다. -->
+                    <!-- 게시글 목록이 동적 추가 -->
                 </div>
             </div>
             <div class="bt_wrap">
@@ -51,18 +79,24 @@
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const postListDiv = document.getElementById('postList');
-            const posts = JSON.parse(localStorage.getItem('posts')) || [];
-            
+        document.addEventListener("DOMContentLoaded", function () {
+            const postListDiv = document.getElementById("postList");
+            const posts = JSON.parse(localStorage.getItem("posts")) || [];
+            const comments = JSON.parse(localStorage.getItem("comments")) || [];
+
+            // 댓글 수 계산 함수
+            function getCommentCount(postId) {
+                return comments.filter(comment => comment.postId === postId).length;
+            }
+
             // 게시글 출력 함수
             function renderPosts(postsToRender) {
                 postListDiv.innerHTML = "";
                 if (postsToRender.length === 0) {
                     postListDiv.innerHTML = "<p>게시글이 없습니다.</p>";
                 } else {
-                    postsToRender.forEach(post => {
-                        const postDiv = document.createElement('div');
+                    postsToRender.forEach((post) => {
+                        const postDiv = document.createElement("div");
                         postDiv.className = "post_item";
                         postDiv.innerHTML = `
                             <div class="num">${post.id}</div>
@@ -81,54 +115,69 @@
             renderPosts(posts);
 
             // 공감 기능
-            window.likePost = function(postId) {
-                const postIndex = posts.findIndex(post => post.id === postId);
+            window.likePost = function (postId) {
+                const postIndex = posts.findIndex((post) => post.id === postId);
                 if (postIndex !== -1) {
                     posts[postIndex].likes += 1;
-                    localStorage.setItem('posts', JSON.stringify(posts));
+                    localStorage.setItem("posts", JSON.stringify(posts));
                     renderPosts(posts);
                 }
             };
 
             // 검색 및 필터링 기능
-            document.getElementById('searchBtn').addEventListener('click', function() {
-                const searchText = document.getElementById('searchInput').value.toLowerCase();
-                const tagSearchText = document.getElementById('tagSearchInput').value.toLowerCase();
-                const visibilityFilter = document.getElementById('visibilitySelect').value;
-                
+            function applyFiltersAndSort() {
+                const searchText = document.getElementById("searchInput").value.trim().toLowerCase();
+                const tagSearchText = document.getElementById("tagSearchInput").value.trim().toLowerCase();
+                const visibilityFilter = document.getElementById("visibilitySelect").value;
+                const sortValue = document.getElementById("sortSelect").value;
+
                 let filteredPosts = posts;
 
+                // 제목 검색
                 if (searchText) {
-                    filteredPosts = filteredPosts.filter(post => post.title.toLowerCase().includes(searchText));
+                    filteredPosts = filteredPosts.filter((post) =>
+                        post.title.toLowerCase().includes(searchText)
+                    );
                 }
 
+                // 태그 검색
                 if (tagSearchText) {
-                    filteredPosts = filteredPosts.filter(post => post.tags.some(tag => tag.toLowerCase().includes(tagSearchText)));
+                    filteredPosts = filteredPosts.filter((post) =>
+                        post.tags && post.tags.some((tag) => tag.toLowerCase().includes(tagSearchText))
+                    );
                 }
 
-                if (visibilityFilter === 'public') {
-                    filteredPosts = filteredPosts.filter(post => post.visibility === 'public');
-                } else if (visibilityFilter === 'private') {
-                    filteredPosts = filteredPosts.filter(post => post.visibility === 'private');
+                // 공개 여부 필터링
+                if (visibilityFilter === "public") {
+                    filteredPosts = filteredPosts.filter((post) => post.visibility === "public");
+                } else if (visibilityFilter === "private") {
+                    filteredPosts = filteredPosts.filter((post) => post.visibility === "private");
+                }
+
+                // 정렬
+                if (sortValue === "likes") {
+                    filteredPosts.sort((a, b) => b.likes - a.likes);
+                } else if (sortValue === "comments") {
+                    filteredPosts.sort((a, b) => getCommentCount(b.id) - getCommentCount(a.id));
+                } else if (sortValue === "latest") {
+                    filteredPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
                 }
 
                 renderPosts(filteredPosts);
+            }
+
+            // 검색 버튼 클릭 이벤트
+            document.getElementById("searchBtn").addEventListener("click", function () {
+                applyFiltersAndSort();
             });
 
-            // 정렬 기능
-            document.getElementById('sortSelect').addEventListener('change', function() {
-                const sortValue = this.value;
-                let sortedPosts = [...posts];  // 원본 배열을 수정하지 않도록 복사본 사용
+            // 정렬 및 필터 변경 이벤트
+            document.getElementById("sortSelect").addEventListener("change", function () {
+                applyFiltersAndSort();
+            });
 
-                if (sortValue === "likes") {
-                    sortedPosts.sort((a, b) => b.likes - a.likes);
-                } else if (sortValue === "comments") {
-                    sortedPosts.sort((a, b) => (b.comments || 0) - (a.comments || 0));
-                } else if (sortValue === "latest") {
-                    sortedPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
-                }
-
-                renderPosts(sortedPosts);
+            document.getElementById("visibilitySelect").addEventListener("change", function () {
+                applyFiltersAndSort();
             });
         });
     </script>
