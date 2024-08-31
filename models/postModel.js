@@ -1,4 +1,6 @@
 // postModel.js
+import { getGroupById, updateGroupById } from './groupModel.js';
+
 let posts = [];
 let postIdCounter = 1;
 
