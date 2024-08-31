@@ -39,6 +39,9 @@ export const updateGroupById = (id, data) => {
         const newBadges = checkBadges(groups[index]);
         groups[index].badges = [...new Set([...groups[index].badges, ...newBadges])];
 
+        // 배지 count 추가
+        groups[index].badgeCount = updatedBadges.length;
+
         return groups[index];
     }
     return null;
