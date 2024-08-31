@@ -15,6 +15,15 @@ export const createPost = (groupId, data) => {
     return post;
 };
 
+
+// 그룹 postCount 추가 
+const group = getGroupById(groupId);
+    if (group) {
+        updateGroupById(groupId, { postCount: group.postCount + 1 });
+    }
+    return post;
+};
+
 export const getPostById = (postId) => {
     return posts.find(post => post.id === parseInt(postId));
 };
