@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 수정</title>
+    <link rel="stylesheet" href="css/css.css">
+</head>
+<body>
+    <div class="board_wrap">
+        <div class="board_title">
+            <strong>게시글 수정</strong>
+            <p>게시글을 수정하세요.</p>
+        </div>
+        <div class="board_write_wrap">
+            <form id="editForm">
+                <div class="board_write">
+                    <div class="title">
+                        <dl>
+                            <dt>제목</dt>
+                            <dd><input type="text" id="title" placeholder="제목 입력"></dd>
+                        </dl>
+                        <div class="info">
+                            <dl>
+                                <dt>작성자</dt>
+                                <dd><input type="text" id="author" placeholder="작성자 입력"></dd>
+                            </dl>
+                            <dl>
+                                <dt>비밀번호</dt>
+                                <dd><input type="password" id="password" placeholder="비밀번호 입력"></dd>
+                            </dl>
+                        </div>
+                        <div class="cont">
+                            <textarea id="content" placeholder="내용 입력"></textarea>
+                        </div>
+                        <div class="extra_info">
+                            <dl>
+                                <dt>기록일자</dt>
+                                <dd><input type="date" id="recordDate"></dd>
+                            </dl>
+                            <dl>
+                                <dt>장소</dt>
+                                <dd><input type="text" id="location" placeholder="장소 입력"></dd>
+                            </dl>
+                            <dl>
+                                <dt>태그</dt>
+                                <dd><input type="text" id="tags" placeholder="태그 입력 (쉼표로 구분)"></dd>
+                            </dl>
+                            <dl>
+                                <dt>이미지</dt>
+                                <dd><input type="file" id="image"></dd>
+                            </dl>
+                            <dl>
+                                <dt>공개 여부</dt>
+                                <dd>
+                                    <label><input type="radio" name="visibility" value="public"> 공개</label>
+                                    <label><input type="radio" name="visibility" value="private"> 비공개</label>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="bt_wrap">
+                        <button type="submit" class="on">수정</button>
+                        <a href="list.html">취소</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = parseInt(urlParams.get('id'), 10);
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const post = posts.find(p => p.id === postId);
+
+            if (post) {
+                document.getElementById('title').value = post.title;
+                document.getElementById('author').value = post.author;
+                document.getElementById('password').value = post.password;
+                document.getElementById('content').value = post.content;
+                document.getElementById('recordDate').value = post.recordDate;
+                document.getElementById('location').value = post.location;
+                document.getElementById('tags').value = post.tags.join(', ');
+                if (post.image) {
+                    document.getElementById('image').dataset.image = post.image;  // 기존 이미지 URL 저장
+                }
+                document.querySelector(`input[name="visibility"][value="${post.visibility}"]`).checked = true;
+            } else {
+                alert('해당 게시글을 찾을 수 없습니다.');
+                window.location.href = 'list.html';
+            }
+
+            document.getElementById('editForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                const title = document.getElementById('title').value;
+                const author = document.getElementById('author').value;
+                const password = document.getElementById('password').value;
+                const content = document.getElementById('content').value;
+                const recordDate = document.getElementById('recordDate').value;
+                const location = document.getElementById('location').value;
+                const tags = document.getElementById('tags').value.split(',').map(tag => tag.trim());
+                const image = document.getElementById('image').files[0];
+                const visibility = document.querySelector('input[name="visibility"]:checked').value;
+
+                let imageUrl = document.getElementById('image').dataset.image || '';
+                if (image) {
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        imageUrl = reader.result;
+                        savePost();
+                    };
+                    reader.readAsDataURL(image);
+                } else {
+                    savePost();
+                }
+                
+                function savePost() {
+                    const updatedPosts = posts.map(p => {
+                        if (p.id === postId) {
+                            return {
+                                ...p,
+                                title,
+                                author,
+                                password,
+                                content,
+                                recordDate,
+                                location,
+                                tags,
+                                image: imageUrl,
+                                visibility
+                            };
+                        }
+                        return p;
+                    });
+                    localStorage.setItem('posts', JSON.stringify(updatedPosts));
+                    alert('게시글이 수정되었습니다.');
+                    window.location.href = 'view.html?id=' + postId;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

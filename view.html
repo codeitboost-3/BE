@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 보기</title>
+    <link rel="stylesheet" href="css/css.css">
+    <style>
+        .tags {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .visibility {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .comments-section {
+            margin-top: 20px;
+        }
+        .comment {
+            border-top: 1px solid #ddd;
+            padding: 10px 0;
+        }
+        .comment-author {
+            font-weight: bold;
+        }
+        .comment-date {
+            font-size: 12px;
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+    <div class="board_wrap">
+        <div class="board_title">
+            <strong>게시글 보기</strong>
+        </div>
+        <div class="board_view_wrap">
+            <div class="board_view">
+                <h1 id="postTitle"></h1>
+                <p><strong>작성자:</strong> <span id="postAuthor"></span></p>
+                <p><strong>작성일:</strong> <span id="postDate"></span></p>
+                <p><strong>기록일:</strong> <span id="postRecordDate"></span></p>
+                <p><strong>장소:</strong> <span id="postLocation"></span></p>
+                <p><strong>조회수:</strong> <span id="postViews"></span></p>
+                <p><strong>공감:</strong> <span id="postLikes"></span></p>
+                <p><strong>댓글 수:</strong> <span id="postCommentsCount">0</span></p>
+                <p class="tags"><strong>태그:</strong> <span id="postTags"></span></p>
+                <p class="visibility"><strong>공개 여부:</strong> <span id="postVisibility"></span></p>
+                <div id="postContent"></div>
+                <img id="postImage" style="display: none; max-width: 100%; margin-top: 10px;" />
+                <div class="bt_wrap">
+                    <button id="editBtn">수정</button>
+                    <button id="deleteBtn">삭제</button>
+                    <a href="list.html">목록</a>
+                </div>
+
+                <!-- 댓글 섹션 -->
+                <div class="comments-section">
+                    <h2>댓글</h2>
+                    <div id="commentsList"></div>
+                    <form id="commentForm">
+                        <input type="text" id="commentAuthor" placeholder="작성자" required>
+                        <textarea id="commentContent" placeholder="댓글 입력" required></textarea>
+                        <button type="submit">댓글 달기</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const postId = parseInt(urlParams.get('id'), 10);
+            const posts = JSON.parse(localStorage.getItem('posts')) || [];
+            const comments = JSON.parse(localStorage.getItem('comments')) || [];
+            const post = posts.find(post => post.id === postId);
+            const postComments = comments.filter(comment => comment.postId === postId);
+
+            // 게시글 정보 표시
+            if (post) {
+                document.getElementById('postTitle').textContent = post.title;
+                document.getElementById('postAuthor').textContent = post.author;
+                document.getElementById('postDate').textContent = post.date;
+                document.getElementById('postRecordDate').textContent = post.recordDate;
+                document.getElementById('postLocation').textContent = post.location;
+                document.getElementById('postContent').textContent = post.content;
+                document.getElementById('postViews').textContent = post.views;
+                document.getElementById('postLikes').textContent = post.likes;
+                document.getElementById('postCommentsCount').textContent = postComments.length;
+                
+                // 태그를 # 형태로 표시
+                document.getElementById('postTags').textContent = post.tags.map(tag => `#${tag}`).join(' ');
+                document.getElementById('postVisibility').textContent = post.visibility === 'public' ? '공개' : '비공개';
+
+                if (post.image) {
+                    const postImage = document.getElementById('postImage');
+                    postImage.src = post.image;
+                    postImage.style.display = 'block';
+                }
+
+                // 조회수 증가
+                post.views++;
+                localStorage.setItem('posts', JSON.stringify(posts));
+                document.getElementById('postViews').textContent = post.views;
+
+                renderComments(postComments);
+
+                // 수정 버튼 이벤트 리스너
+                document.getElementById('editBtn').addEventListener('click', () => {
+                    const inputPassword = prompt('비밀번호를 입력하세요:');
+                    if (inputPassword === post.password) {
+                        window.location.href = `edit.html?id=${post.id}`;
+                    } else {
+                        alert('비밀번호가 일치하지 않습니다.');
+                    }
+                });
+
+                // 삭제 버튼 이벤트 리스너
+                document.getElementById('deleteBtn').addEventListener('click', () => {
+                    const inputPassword = prompt('비밀번호를 입력하세요:');
+                    if (inputPassword === post.password) {
+                        const index = posts.findIndex(p => p.id === postId);
+                        if (index > -1) {
+                            posts.splice(index, 1);
+                            localStorage.setItem('posts', JSON.stringify(posts));
+                            alert('게시글이 삭제되었습니다.');
+                            window.location.href = 'list.html';
+                        }
+                    } else {
+                        alert('비밀번호가 일치하지 않습니다.');
+                    }
+                });
+            } else {
+                alert('게시글을 찾을 수 없습니다.');
+            }
+
+            // 댓글 렌더링 함수
+            function renderComments(comments) {
+                const commentsList = document.getElementById('commentsList');
+                commentsList.innerHTML = "";
+
+                if (comments.length === 0) {
+                    commentsList.innerHTML = "<p>댓글이 없습니다.</p>";
+                } else {
+                    comments.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = "comment";
+                        commentDiv.innerHTML = `
+                            <p class="comment-author">${comment.author} <span class="comment-date">${comment.date}</span></p>
+                            <p>${comment.content}</p>
+                        `;
+                        commentsList.appendChild(commentDiv);
+                    });
+                }
+
+                // 댓글 수 갱신
+                document.getElementById('postCommentsCount').textContent = comments.length;
+            }
+
+            // 댓글 작성 폼 제출 이벤트
+            document.getElementById('commentForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const commentAuthor = document.getElementById('commentAuthor').value;
+                const commentContent = document.getElementById('commentContent').value;
+                const newComment = {
+                    id: comments.length ? comments[comments.length - 1].id + 1 : 1,
+                    postId,
+                    author: commentAuthor,
+                    content: commentContent,
+                    date: new Date().toLocaleString()
+                };
+
+                comments.push(newComment);
+                localStorage.setItem('comments', JSON.stringify(comments));
+                renderComments(comments.filter(comment => comment.postId === postId));
+
+                // 댓글 입력 후 초기화
+                document.getElementById('commentAuthor').value = '';
+                document.getElementById('commentContent').value = '';
+            });
+        });
+    </script>
+</body>
+</html>

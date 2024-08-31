@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 목록</title>
+    <link rel="stylesheet" href="css/css.css">
+    <style>
+        .post_item {
+            display: grid;
+            grid-template-columns: 50px 1fr 100px 100px 70px 70px;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .post_item .num {
+            text-align: center;
+        }
+        .post_item .title a {
+            text-decoration: none;
+            color: #000;
+        }
+        .post_item .title a:hover {
+            text-decoration: underline;
+        }
+        .search_sort_wrap {
+            margin-bottom: 20px;
+        }
+        .search_sort_wrap input, .search_sort_wrap select {
+            margin-right: 10px;
+            padding: 5px;
+        }
+        .search_sort_wrap button {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="board_wrap">
+        <div class="board_title">
+            <strong>게시글 목록</strong>
+            <p>게시글 목록을 확인할 수 있습니다.</p>
+        </div>
+
+        <!-- 검색 및 정렬 기능 추가 -->
+        <div class="search_sort_wrap">
+            <input type="text" id="searchInput" placeholder="제목으로 검색">
+            <input type="text" id="tagSearchInput" placeholder="태그로 검색">
+            <button id="searchBtn">검색</button>
+            <select id="sortSelect">
+                <option value="latest">최신순</option>
+                <option value="comments">댓글순</option>
+                <option value="likes">공감순</option>
+            </select>
+            <select id="visibilitySelect">
+                <option value="all">전체</option>
+                <option value="public">공개</option>
+                <option value="private">비공개</option>
+            </select>
+        </div>
+
+        <div class="board_list_wrap">
+            <div class="board_list">
+                <div class="top">
+                    <div class="num">번호</div>
+                    <div class="title">제목</div>
+                    <div class="writer">글쓴이</div>
+                    <div class="date">작성일</div>
+                    <div class="count">조회</div>
+                    <div class="likes">공감</div>
+                </div>    
+                <div id="postList" class="post_list_container">
+                    <!-- 게시글 목록이 동적 추가 -->
+                </div>
+            </div>
+            <div class="bt_wrap">
+                <a href="write.html" class="on">등록</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const postListDiv = document.getElementById("postList");
+            const posts = JSON.parse(localStorage.getItem("posts")) || [];
+            const comments = JSON.parse(localStorage.getItem("comments")) || [];
+
+            // 댓글 수 계산 함수
+            function getCommentCount(postId) {
+                return comments.filter(comment => comment.postId === postId).length;
+            }
+
+            // 게시글 출력 함수
+            function renderPosts(postsToRender) {
+                postListDiv.innerHTML = "";
+                if (postsToRender.length === 0) {
+                    postListDiv.innerHTML = "<p>게시글이 없습니다.</p>";
+                } else {
+                    postsToRender.forEach((post) => {
+                        const postDiv = document.createElement("div");
+                        postDiv.className = "post_item";
+                        postDiv.innerHTML = `
+                            <div class="num">${post.id}</div>
+                            <div class="title"><a href="view.html?id=${post.id}">${post.title}</a></div>
+                            <div class="writer">${post.author}</div>
+                            <div class="date">${post.date}</div>
+                            <div class="count">${post.views}</div>
+                            <div class="likes">${post.likes} <button onclick="likePost(${post.id})">공감</button></div>
+                        `;
+                        postListDiv.appendChild(postDiv);
+                    });
+                }
+            }
+
+            // 처음 페이지 로드 시 게시글 목록 출력
+            renderPosts(posts);
+
+            // 공감 기능
+            window.likePost = function (postId) {
+                const postIndex = posts.findIndex((post) => post.id === postId);
+                if (postIndex !== -1) {
+                    posts[postIndex].likes += 1;
+                    localStorage.setItem("posts", JSON.stringify(posts));
+                    renderPosts(posts);
+                }
+            };
+
+            // 검색 및 필터링 기능
+            function applyFiltersAndSort() {
+                const searchText = document.getElementById("searchInput").value.trim().toLowerCase();
+                const tagSearchText = document.getElementById("tagSearchInput").value.trim().toLowerCase();
+                const visibilityFilter = document.getElementById("visibilitySelect").value;
+                const sortValue = document.getElementById("sortSelect").value;
+
+                let filteredPosts = posts;
+
+                // 제목 검색
+                if (searchText) {
+                    filteredPosts = filteredPosts.filter((post) =>
+                        post.title.toLowerCase().includes(searchText)
+                    );
+                }
+
+                // 태그 검색
+                if (tagSearchText) {
+                    filteredPosts = filteredPosts.filter((post) =>
+                        post.tags && post.tags.some((tag) => tag.toLowerCase().includes(tagSearchText))
+                    );
+                }
+
+                // 공개 여부 필터링
+                if (visibilityFilter === "public") {
+                    filteredPosts = filteredPosts.filter((post) => post.visibility === "public");
+                } else if (visibilityFilter === "private") {
+                    filteredPosts = filteredPosts.filter((post) => post.visibility === "private");
+                }
+
+                // 정렬
+                if (sortValue === "likes") {
+                    filteredPosts.sort((a, b) => b.likes - a.likes);
+                } else if (sortValue === "comments") {
+                    filteredPosts.sort((a, b) => getCommentCount(b.id) - getCommentCount(a.id));
+                } else if (sortValue === "latest") {
+                    filteredPosts.sort((a, b) => new Date(b.date) - new Date(a.date));
+                }
+
+                renderPosts(filteredPosts);
+            }
+
+            // 검색 버튼 클릭 이벤트
+            document.getElementById("searchBtn").addEventListener("click", function () {
+                applyFiltersAndSort();
+            });
+
+            // 정렬 및 필터 변경 이벤트
+            document.getElementById("sortSelect").addEventListener("change", function () {
+                applyFiltersAndSort();
+            });
+
+            document.getElementById("visibilitySelect").addEventListener("change", function () {
+                applyFiltersAndSort();
+            });
+        });
+    </script>
+</body>
+</html>
