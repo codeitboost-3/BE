@@ -40,7 +40,15 @@ export const updatePostById = (postId, data) => {
 export const deletePostById = (postId) => {
     const index = posts.findIndex(post => post.id === parseInt(postId));
     if (index !== -1) {
+        const post = posts[index];
         posts.splice(index, 1);
+
+        // 그룹 postCount 감소
+        const group = getGroupById(post.groupId);
+        if (group) {
+            updateGroupById(post.groupId, { postCount: group.postCount - 1 });
+        }
+
         return true;
     }
     return false;
