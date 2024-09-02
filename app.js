@@ -23,6 +23,8 @@ app.use(cors(corsOptions));
 // MongoDB 연결
 const mongoURI = process.env.DATABASE_URL;  // 환경 변수에서 DB URL을 가져옴
 
+mongoose.set('strictQuery', true);  // strictQuery 설정 추가
+
 mongoose.connect(mongoURI)
   .then(() => {
     console.log('Connected to DB');
