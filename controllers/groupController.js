@@ -5,14 +5,14 @@ export const registGroup = async (req, res) => {
         const { name, password, imageUrl, isPublic, introduction } = req.body;
 
         if (!name || !password || !imageUrl || typeof isPublic !== 'boolean' || !introduction) {
-            return res.status(400).json({ message: '잘못된 요청입니다' });
+            return res.status(400).json({ message: '잘못된 요청입니다.' });
         }
 
         const newGroup = new Group({ name, password, imageUrl, isPublic, introduction });
         const savedGroup = await newGroup.save();
         return res.status(201).json(savedGroup);
     } catch (error) {
-        return res.status(500).json({ message: '서버 오류입니다', error: error.message });
+        return res.status(500).json({ message: '서버 오류입니다.', error: error.message });
     }
 };
 
