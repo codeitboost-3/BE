@@ -14,15 +14,13 @@ export const createPost = (groupId, data) => {
         ...data
     };
     posts.push(post);
-    return post;
-};
 
-
-// 그룹 postCount 추가 
-const group = getGroupById(groupId);
+    // 그룹 postCount 추가 
+    const group = getGroupById(groupId);
     if (group) {
         updateGroupById(groupId, { postCount: group.postCount + 1 });
     }
+    
     return post;
 };
 

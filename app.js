@@ -2,7 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import groupRoutes from './routes/groupRoute.js';
-import commentRoutes from './routes/commentRoutes.js';
+import commentRoutes from './routes/commentRoute.js';
 import badgeRoutes from './routes/badgeRoute.js';
 import postRoutes from './routes/postRoute.js';
 import * as dotenv from 'dotenv';
