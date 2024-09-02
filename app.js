@@ -11,14 +11,13 @@ dotenv.config();  // 환경 변수를 로드
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-
+// CORS 옵션 설정
 const corsOptions = {
   origin: ['http://127.0.0.1:5500', 'https://my-project.com'],
 };
 
-app.use(cors(corsOptions));
+app.use(cors(corsOptions));  // CORS 설정 적용
+app.use(express.json());  // JSON 바디 파싱
 
 // MongoDB 연결
 const mongoURI = process.env.DATABASE_URL;  // 환경 변수에서 DB URL을 가져옴
@@ -31,6 +30,7 @@ mongoose.connect(mongoURI)
   })
   .catch((error) => {
     console.error('Error connecting to DB:', error);
+    process.exit(1);  // 연결 실패 시 프로세스 종료
   });
 
 // 라우트 설정
@@ -41,7 +41,7 @@ app.get('/', (req, res) => {
 app.use('/api/groups', groupRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/badges', badgeRoutes); 
-app.use('/api', postRoutes);
+app.use('/api/posts', postRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
