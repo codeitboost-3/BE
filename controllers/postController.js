@@ -1,23 +1,44 @@
-// postController.js
-import {
-    createPost,
-    getPostById,
-    updatePostById,
-    deletePostById,
-    getPostsByGroupId
-} from '../models/postModel.js';
+import Post from '../models/postModel.js';
+import Group from '../models/groupModel.js';
 
 export const createNewPost = async (req, res) => {
     try {
         const { groupId } = req.params;
         const { nickname, title, content, imageUrl, tags, location, moment, isPublic, password } = req.body;
-        
-        if (!nickname || !title || !content || !imageUrl || !tags || !location || !moment || typeof isPublic !== 'boolean' || !password) {
+
+        if (!nickname || !title || !content || !password) {
             return res.status(400).json({ message: '잘못된 요청입니다' });
         }
 
-        const post = createPost(groupId, { nickname, title, content, imageUrl, tags, location, moment, isPublic, password });
-        return res.status(201).json(post);
+        const newPost = new Post({
+            groupId,
+            nickname,
+            title,
+            content,
+            imageUrl,
+            tags,
+            location,
+            moment,
+            isPublic,
+            password
+        });
+
+        const savedPost = await newPost.save();
+
+        await Group.findByIdAndUpdate(groupId, { $inc: { postCount: 1 } });
+
+        return res.status(201).json(savedPost);
+    } catch (error) {
+        return res.status(500).json({ message: '서버 오류입니다', error: error.message });
+    }
+};
+
+export const getPostDetail = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
+        return res.status(200).json(post);
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
@@ -28,12 +49,21 @@ export const updateExistingPost = async (req, res) => {
         const { postId } = req.params;
         const { nickname, title, content, imageUrl, tags, location, moment, isPublic, password } = req.body;
 
-        const post = getPostById(postId);
-        if (!post) return res.status(404).json({ message: '존재하지 않습니다' });
-        
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
+
         if (post.password !== password) return res.status(403).json({ message: '비밀번호가 틀렸습니다' });
 
-        const updatedPost = updatePostById(postId, { nickname, title, content, imageUrl, tags, location, moment, isPublic });
+        post.nickname = nickname || post.nickname;
+        post.title = title || post.title;
+        post.content = content || post.content;
+        post.imageUrl = imageUrl || post.imageUrl;
+        post.tags = tags || post.tags;
+        post.location = location || post.location;
+        post.moment = moment || post.moment;
+        post.isPublic = isPublic !== undefined ? isPublic : post.isPublic;
+
+        const updatedPost = await post.save();
         return res.status(200).json(updatedPost);
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
@@ -45,24 +75,16 @@ export const deletePost = async (req, res) => {
         const { postId } = req.params;
         const { password } = req.body;
 
-        const post = getPostById(postId);
-        if (!post) return res.status(404).json({ message: '존재하지 않습니다' });
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
 
         if (post.password !== password) return res.status(403).json({ message: '비밀번호가 틀렸습니다' });
 
-        deletePostById(postId);
-        return res.status(200).json({ message: '게시글 삭제 성공' });
-    } catch (error) {
-        return res.status(500).json({ message: '서버 오류입니다', error: error.message });
-    }
-};
+        await Post.findByIdAndDelete(postId);
 
-export const getPostDetail = async (req, res) => {
-    try {
-        const { postId } = req.params;
-        const post = getPostById(postId);
-        if (!post) return res.status(404).json({ message: '존재하지 않습니다' });
-        return res.status(200).json(post);
+        await Group.findByIdAndUpdate(post.groupId, { $inc: { postCount: -1 } });
+
+        return res.status(200).json({ message: '게시글 삭제 성공' });
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
@@ -73,9 +95,36 @@ export const getGroupPosts = async (req, res) => {
         const { groupId } = req.params;
         const { page = 1, pageSize = 10, sortBy = 'latest', keyword = '', isPublic } = req.query;
 
-        const posts = getPostsByGroupId(groupId, { page: parseInt(page), pageSize: parseInt(pageSize), sortBy, keyword, isPublic });
+        let query = { groupId };
+        if (isPublic !== undefined) {
+            query.isPublic = isPublic;
+        }
+        if (keyword) {
+            query.$or = [{ title: new RegExp(keyword, 'i') }, { tags: new RegExp(keyword, 'i') }];
+        }
 
-        return res.status(200).json(posts);
+        const totalItemCount = await Post.countDocuments(query);
+
+        let sortCriteria;
+        if (sortBy === 'mostCommented') {
+            sortCriteria = { commentCount: -1 };
+        } else if (sortBy === 'mostLiked') {
+            sortCriteria = { likeCount: -1 };
+        } else {
+            sortCriteria = { createdAt: -1 };
+        }
+
+        const posts = await Post.find(query)
+            .sort(sortCriteria)
+            .skip((page - 1) * pageSize)
+            .limit(parseInt(pageSize));
+
+        return res.status(200).json({
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalItemCount / pageSize),
+            totalItemCount,
+            data: posts
+        });
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
@@ -84,11 +133,12 @@ export const getGroupPosts = async (req, res) => {
 export const likePost = async (req, res) => {
     try {
         const { postId } = req.params;
-        const post = getPostById(postId);
-        if (!post) return res.status(404).json({ message: '존재하지 않습니다' });
+
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
 
         post.likeCount += 1;
-        updatePostById(postId, { likeCount: post.likeCount });
+        await post.save();
 
         return res.status(200).json({ message: '게시글 공감하기 성공' });
     } catch (error) {
@@ -99,8 +149,8 @@ export const likePost = async (req, res) => {
 export const checkPostPublicStatus = async (req, res) => {
     try {
         const { postId } = req.params;
-        const post = getPostById(postId);
-        if (!post) return res.status(404).json({ message: '존재하지 않습니다' });
+        const post = await Post.findById(postId, 'isPublic');
+        if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
         return res.status(200).json({ id: post.id, isPublic: post.isPublic });
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });

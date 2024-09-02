@@ -1,4 +1,18 @@
-const comments = []; 
+import mongoose from 'mongoose';
+
+// Mongoose 스키마 정의
+const commentSchema = new mongoose.Schema({
+    nickname: { type: String, required: true },
+    content: { type: String, required: true },
+    password: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Mongoose 모델 생성
+const Comment = mongoose.model('Comment', commentSchema);
+
+// 기존의 in-memory 배열 및 함수들을 유지
+const comments = [];
 
 const generateNumericId = () => {
   return Math.floor(Math.random() * 1000000000).toString(); 
@@ -41,3 +55,5 @@ export const getComments = ({ page, pageSize }) => {
     const end = start + pageSize;
     return comments.slice(start, end);
 };
+
+export default Comment;  // Mongoose 모델도 함께 내보냄

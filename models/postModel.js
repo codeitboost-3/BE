@@ -1,6 +1,27 @@
-// postModel.js
+import mongoose from 'mongoose';
 import { getGroupById, updateGroupById } from './groupModel.js';
 
+// Mongoose 스키마 정의
+const postSchema = new mongoose.Schema({
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', required: true },
+    nickname: { type: String, required: true },
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    imageUrl: { type: String },
+    tags: [{ type: String }],
+    location: { type: String },
+    moment: { type: Date, default: Date.now },
+    isPublic: { type: Boolean, default: true },
+    likeCount: { type: Number, default: 0 },
+    commentCount: { type: Number, default: 0 },
+    password: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+// Mongoose 모델 생성
+const Post = mongoose.model('Post', postSchema);
+
+// 기존의 in-memory 배열 및 함수들을 유지
 let posts = [];
 let postIdCounter = 1;
 
@@ -85,3 +106,5 @@ export const getPostsByGroupId = (groupId, { isPublic, keyword, sortBy, page, pa
         data: paginatedPosts
     };
 };
+
+export default Post;  // Mongoose 모델도 함께 내보냄
