@@ -32,7 +32,7 @@
 
 ## 📄 프로젝트 구조
 ```plaintext
-memory-sharing-service/
+project/
 │
 ├── models/              # Mongoose 모델 정의
 │   ├── groupModel.js
