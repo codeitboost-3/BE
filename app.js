@@ -39,9 +39,10 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/groups', groupRoutes);
+app.use('/api/groups', postRoutes); // 그룹 내 게시글 생성 및 목록 조회 관련 경로
+app.use('/api/posts', postRoutes);  // 게시글 수정, 삭제, 상세 조회 관련 경로
 app.use('/api/comments', commentRoutes);
 app.use('/api/badges', badgeRoutes); 
-app.use('/api/posts', postRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

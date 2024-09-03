@@ -47,10 +47,13 @@ export const getPostDetail = async (req, res) => {
 export const updateExistingPost = async (req, res) => {
     try {
         const { postId } = req.params;
-        const { nickname, title, content, imageUrl, tags, location, moment, isPublic, password } = req.body;
+        console.log("Post ID:", postId);  // 로그 추가
 
         const post = await Post.findById(postId);
+        console.log("Post found:", post);  // 로그 추가
         if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
+
+        const { nickname, title, content, imageUrl, tags, location, moment, isPublic, password } = req.body;
 
         if (post.password !== password) return res.status(403).json({ message: '비밀번호가 틀렸습니다' });
 
@@ -66,6 +69,7 @@ export const updateExistingPost = async (req, res) => {
         const updatedPost = await post.save();
         return res.status(200).json(updatedPost);
     } catch (error) {
+        console.error('Error in updateExistingPost:', error);  // 로그 추가
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
 };
@@ -97,7 +101,7 @@ export const getGroupPosts = async (req, res) => {
 
         let query = { groupId };
         if (isPublic !== undefined) {
-            query.isPublic = isPublic;
+            query.isPublic = isPublic === 'true';  // 공개 여부 필터링 추가
         }
         if (keyword) {
             query.$or = [{ title: new RegExp(keyword, 'i') }, { tags: new RegExp(keyword, 'i') }];
@@ -119,11 +123,24 @@ export const getGroupPosts = async (req, res) => {
             .skip((page - 1) * pageSize)
             .limit(parseInt(pageSize));
 
+        const result = posts.map(post => ({
+            id: post._id,
+            nickname: post.nickname,
+            title: post.title,
+            imageUrl: post.imageUrl,
+            tags: post.tags,
+            location: post.location,
+            moment: post.moment,
+            isPublic: post.isPublic,
+            likeCount: post.likeCount,
+            commentCount: post.commentCount
+        }));
+
         return res.status(200).json({
             currentPage: parseInt(page),
             totalPages: Math.ceil(totalItemCount / pageSize),
             totalItemCount,
-            data: posts
+            data: result
         });
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
@@ -152,6 +169,28 @@ export const checkPostPublicStatus = async (req, res) => {
         const post = await Post.findById(postId, 'isPublic');
         if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다' });
         return res.status(200).json({ id: post.id, isPublic: post.isPublic });
+    } catch (error) {
+        return res.status(500).json({ message: '서버 오류입니다', error: error.message });
+    }
+};
+
+export const verifyPassword = async (req, res) => {
+    try {
+        const { groupId, password } = req.body;
+
+        // 그룹 ID와 비밀번호가 요청에 포함되어 있는지 확인
+        if (!groupId || !password) {
+            return res.status(400).json({ message: '그룹 ID와 비밀번호를 모두 제공해야 합니다.' });
+        }
+
+        const group = await Group.findById(groupId).select('+password');
+        if (!group) return res.status(404).json({ message: '존재하지 않습니다' });
+
+        if (group.password === password) {
+            return res.status(200).json({ message: '비밀번호가 확인되었습니다' });
+        } else {
+            return res.status(401).json({ message: '비밀번호가 틀렸습니다' });
+        }
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }

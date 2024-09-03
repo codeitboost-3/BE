@@ -5,31 +5,35 @@ import {
     deletePost,
     getPostDetail,
     getGroupPosts,
+    verifyPassword,
     likePost,
     checkPostPublicStatus
 } from '../controllers/postController.js';
 
 const router = express.Router();
 
-// 게시글 등록
+// 그룹 내 게시글 등록
 router.post('/:groupId/posts', createNewPost);
 
-// 게시글 수정
-router.put('/posts/:postId', updateExistingPost);
+// 특정 게시글 상세 조회
+router.get('/:postId', getPostDetail);
 
-// 게시글 삭제
-router.delete('/posts/:postId', deletePost);
+// 특정 게시글 수정
+router.put('/:postId', updateExistingPost);
 
-// 게시글 목록 조회
+// 특정 게시글 삭제
+router.delete('/:postId', deletePost);
+
+// 그룹 내 게시글 목록 조회
 router.get('/:groupId/posts', getGroupPosts);
 
-// 게시글 상세 조회
-router.get('/posts/:postId', getPostDetail);
+// 게시글 조회 권한 확인
+router.post('/:postId/verify-password', verifyPassword);
 
-// 게시글 공감하기
-router.post('/posts/:postId/like', likePost);
+// 특정 게시글 공감 추가
+router.post('/:postId/like', likePost);
 
-// 게시글 공개 여부 확인
-router.get('/posts/:postId/is-public', checkPostPublicStatus);
+// 특정 게시글 공개 여부 확인
+router.get('/:postId/is-public', checkPostPublicStatus);
 
 export default router;

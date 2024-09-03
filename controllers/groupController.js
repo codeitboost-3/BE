@@ -1,4 +1,5 @@
 import Group from '../models/groupModel.js';
+import Post from '../models/postModel.js';
 
 export const registGroup = async (req, res) => {
     try {
@@ -24,8 +25,8 @@ export const getGroupsList = async (req, res) => {
         if (keyword) {
             query.$or = [{ name: new RegExp(keyword, 'i') }, { introduction: new RegExp(keyword, 'i') }];
         }
-        if (typeof isPublic === 'boolean') {
-            query.isPublic = isPublic;
+        if (isPublic !== undefined) {
+            query.isPublic = isPublic === 'true';  // 공개 여부 필터링 추가
         }
 
         let sortCriteria;
@@ -45,11 +46,24 @@ export const getGroupsList = async (req, res) => {
             .limit(parseInt(pageSize));
 
         const totalItemCount = await Group.countDocuments(query);
+
+        const result = groups.map(group => ({
+            id: group._id,
+            name: group.name,
+            imageUrl: group.imageUrl,
+            introduction: group.introduction,
+            isPublic: group.isPublic,
+            dDay: Math.floor((new Date() - new Date(group.createdAt)) / (1000 * 60 * 60 * 24)),
+            badges: group.badges.length,
+            postCount: group.postCount,
+            likeCount: group.likeCount
+        }));
+
         return res.status(200).json({
             currentPage: parseInt(page),
             totalPages: Math.ceil(totalItemCount / pageSize),
             totalItemCount,
-            data: groups
+            data: result
         });
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
@@ -98,11 +112,32 @@ export const deleteGroup = async (req, res) => {
 export const getGroupDetail = async (req, res) => {
     try {
         const { groupId } = req.params;
+        const { password } = req.body;
 
         const group = await Group.findById(groupId);
         if (!group) return res.status(404).json({ message: '존재하지 않습니다' });
 
-        return res.status(200).json(group);
+        // 비공개 그룹의 경우 비밀번호 확인
+        if (!group.isPublic) {
+            if (!password || group.password !== password) {
+                return res.status(403).json({ message: '비밀번호가 틀렸습니다' });
+            }
+        }
+
+        const groupDetail = {
+            id: group._id,
+            name: group.name,
+            imageUrl: group.imageUrl,
+            introduction: group.introduction,
+            isPublic: group.isPublic,
+            dDay: Math.floor((new Date() - new Date(group.createdAt)) / (1000 * 60 * 60 * 24)),
+            badges: group.badges,
+            postCount: group.postCount,
+            likeCount: group.likeCount,
+            memories: await Post.find({ groupId: group._id }).select('title nickname isPublic likeCount commentCount')
+        };
+
+        return res.status(200).json(groupDetail);
     } catch (error) {
         return res.status(500).json({ message: '서버 오류입니다', error: error.message });
     }
